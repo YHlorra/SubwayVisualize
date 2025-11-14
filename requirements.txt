@@ -1,0 +1,12 @@
+flask
+flask-cors
+waitress
+requests
+pandas
+geopandas
+shapely
+matplotlib
+seaborn
+beautifulsoup4
+geopy
+playwright

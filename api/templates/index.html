@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>地铁数据分析系统</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>地铁数据分析系统</h1>
+    <p>选择城市和地铁线路，开始数据抓取与分析</p>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="field">
+        <label>输入或选择城市</label>
+        <input id="cityInput" list="citylist" placeholder="如：济南 或 济南市" />
+        <datalist id="citylist"></datalist>
+      </div>
+      <div class="field">
+        <label>地铁线路</label>
+        <select id="line"></select>
+      </div>
+      <div class="field">
+        <label>抓取页数</label>
+        <input id="pages" type="number" min="1" max="20" value="10" />
+      </div>
+      <div class="actions">
+        <button id="analyzeBtn">开始分析</button>
+        <span id="error" class="error" style="display:none"></span>
+      </div>
+      <div class="help">
+        <div>• 选择目标城市与地铁线路</div>
+        <div>• 设置抓取页数控制数据量</div>
+        <div>• 抓取分析时间根据城市与页数而异，请耐心等待</div>
+      </div>
+    </section>
+
+    <section class="chart">
+      <div class="chartHeader">
+        <h2>数据可视化</h2>
+        <div class="chartSelect" id="chartSelectWrap">
+          <span>选择图表</span>
+          <select id="chartSelect" disabled></select>
+        </div>
+        <div id="errorRight" class="error" style="display:none"></div>
+      </div>
+      <div id="progress" class="progress" style="display:none"></div>
+      <div id="placeholder" class="placeholder">
+        <div class="placeholderInner">
+          <div class="phTitle">图表容器</div>
+          <div class="phDesc">配置参数并开始分析后，数据图表将在此处显示</div>
+        </div>
+      </div>
+      <div id="chartBox" class="chartBox" style="display:none">
+        <img id="chartImg" alt="chart" />
+        <div class="download">
+          <button id="downloadBtn">下载图表</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const cityInputEl = document.getElementById('cityInput')
+    const cityListEl = document.getElementById('citylist')
+    const lineEl = document.getElementById('line')
+    const pagesEl = document.getElementById('pages')
+    const analyzeBtn = document.getElementById('analyzeBtn')
+    const errorEl = document.getElementById('error')
+    const chartSelectWrap = document.getElementById('chartSelectWrap')
+    const chartSelectEl = document.getElementById('chartSelect')
+    const placeholderEl = document.getElementById('placeholder')
+    const chartBoxEl = document.getElementById('chartBox')
+    const chartImgEl = document.getElementById('chartImg')
+    const downloadBtn = document.getElementById('downloadBtn')
+    const errorRight = document.getElementById('errorRight')
+
+    const citySpellByName = {}
+    let currentCitySpell = ''
+    let charts = []
+    let selectedKey = ''
+    let combined = null
+    let isLoading = false
+    let currentRequestId = 0
+
+    function labelFor(key) {
+      const map = { min_top: '最低单价Top', count_top: '房源数Top', avg_price: '平均单价', boxplot: '单价分布', combined: '综合图' }
+      return map[key] || key
+    }
+
+    async function loadCities() {
+      const r = await fetch('/api/cities')
+      const list = await r.json()
+      cityListEl.innerHTML = ''
+      list.forEach(c => {
+        const opt = document.createElement('option')
+        opt.value = c.name
+        citySpellByName[c.name] = c.spell
+        cityListEl.appendChild(opt)
+      })
+      if (citySpellByName['厦门市']) cityInputEl.value = '厦门市'
+      chartSelectEl.innerHTML = ''
+      const placeholderOpt = document.createElement('option')
+      placeholderOpt.value = ''
+      placeholderOpt.textContent = '请选择图表'
+      chartSelectEl.appendChild(placeholderOpt)
+      chartSelectEl.disabled = true
+      chartSelectWrap.style.display = 'flex'
+      await loadLines()
+    }
+
+    async function loadLines() {
+      errorEl.style.display = 'none'
+      try {
+        lineEl.disabled = true
+        lineEl.innerHTML = ''
+        const syncingOpt = document.createElement('option')
+        syncingOpt.value = ''
+        syncingOpt.textContent = '同步线路中...'
+        lineEl.appendChild(syncingOpt)
+        const r = await fetch('/api/subway?city=' + encodeURIComponent(cityInputEl.value))
+        const data = await r.json()
+        currentCitySpell = data.city_spell || citySpellByName[cityInputEl.value] || ''
+        lineEl.innerHTML = ''
+        data.lines.forEach(l => {
+          const opt = document.createElement('option')
+          opt.value = l; opt.textContent = l
+          lineEl.appendChild(opt)
+        })
+        if (data.lines.length) lineEl.value = data.lines[0]
+        lineEl.disabled = false
+      } catch (e) {
+        errorEl.textContent = '获取地铁线路失败'
+        errorEl.style.display = 'inline'
+        lineEl.disabled = false
+      }
+    }
+
+    cityInputEl.addEventListener('change', loadLines)
+    cityInputEl.addEventListener('input', () => { errorEl.style.display = 'none' })
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (isLoading) return
+      document.getElementById('progress').style.display = 'block'
+      isLoading = true
+      analyzeBtn.disabled = true
+      cityInputEl.disabled = true
+      lineEl.disabled = true
+      errorEl.style.display = 'none'
+      errorRight.style.display = 'none'
+      charts = []
+      chartSelectEl.innerHTML = ''
+      const placeholderOpt = document.createElement('option')
+      placeholderOpt.value = ''
+      placeholderOpt.textContent = '请选择图表'
+      chartSelectEl.appendChild(placeholderOpt)
+      chartSelectEl.disabled = true
+      chartSelectWrap.style.display = 'flex'
+      placeholderEl.style.display = 'block'
+      chartBoxEl.style.display = 'none'
+      const requestId = ++currentRequestId
+      try {
+        const lineNum = (lineEl.value.match(/\d+/) || [''])[0]
+        const r = await fetch('/api/analyze', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ city: cityInputEl.value, line: lineNum, pages: Number(pagesEl.value), city_spell: currentCitySpell })
+        })
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}))
+          throw new Error(err.error || '分析失败')
+        }
+        const data = await r.json()
+        if (requestId !== currentRequestId) return
+        charts = (data.charts || []).filter(c => c.key !== 'combined')
+        combined = data.chart_b64 ? { key: 'combined', b64: data.chart_b64, name: data.chart_name } : null
+        if (charts.length) {
+          chartSelectEl.disabled = false
+          charts.forEach(c => {
+            const opt = document.createElement('option')
+            opt.value = c.key; opt.textContent = labelFor(c.key)
+            chartSelectEl.appendChild(opt)
+          })
+          selectedKey = charts[0].key
+          chartSelectEl.value = selectedKey
+          const b64 = charts[0].b64
+          chartImgEl.src = 'data:image/png;base64,' + b64
+          placeholderEl.style.display = 'none'
+          chartBoxEl.style.display = 'block'
+          errorRight.style.display = 'none'
+        } else if (combined) {
+          selectedKey = 'combined'
+          chartImgEl.src = 'data:image/png;base64,' + combined.b64
+          placeholderEl.style.display = 'none'
+          chartBoxEl.style.display = 'block'
+          errorRight.style.display = 'none'
+        }
+      } catch (e) {
+        errorEl.textContent = e.message || '分析失败'
+        errorEl.style.display = 'inline'
+        errorRight.textContent = e.message || '分析失败'
+        errorRight.style.display = 'block'
+      } finally {
+        document.getElementById('progress').style.display = 'none'
+        isLoading = false
+        analyzeBtn.disabled = false
+        cityInputEl.disabled = false
+        lineEl.disabled = false
+      }
+    })
+
+    chartSelectEl.addEventListener('change', () => {
+      selectedKey = chartSelectEl.value
+      const sel = charts.find(c => c.key === selectedKey)
+      if (sel) chartImgEl.src = 'data:image/png;base64,' + sel.b64
+    })
+
+    downloadBtn.addEventListener('click', async () => {
+      let sel = charts.find(c => c.key === selectedKey)
+      if (!sel && combined) sel = combined
+      if (!sel) return
+      const r = await fetch('/api/download/chart', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chart_b64: sel.b64, chart_name: sel.name || 'chart.png' })
+      })
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = sel.name || 'chart.png'
+      document.body.appendChild(a); a.click(); a.remove()
+    })
+
+    loadCities()
+  </script>
+</body>
+</html>

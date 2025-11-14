@@ -1,0 +1,52 @@
+:root{
+  --radius:0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--background);color:var(--foreground);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.header{background:var(--card);box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.header h1{margin:0;padding:20px 0;text-align:center;font-size:28px;color:var(--card-foreground)}
+.header p{text-align:center;margin:0 0 16px;color:var(--muted-foreground)}
+.container{max-width:1200px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:768px){.container{grid-template-columns:1fr 2fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.field label{display:block;font-weight:600;margin-bottom:8px;color:var(--foreground)}
+select,input{width:100%;padding:10px 12px;border:2px solid var(--input);border-radius:10px;font-size:14px;outline:none;background:var(--background);color:var(--foreground)}
+select:focus,input:focus{border-color:var(--ring)}
+.actions{display:flex;align-items:center;gap:12px}
+button{padding:10px 16px;border:none;border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-weight:600;cursor:pointer}
+button:hover{filter:brightness(0.95)}
+.error{color:#fff;background:var(--destructive);padding:8px 10px;border-radius:8px}
+.help{background:var(--secondary);border-radius:10px;padding:12px;color:var(--muted-foreground);font-size:14px}
+.chart{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;min-height:400px}
+.chartHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.chartHeader h2{margin:0;font-size:22px;color:var(--card-foreground)}
+.chartSelect{display:flex;align-items:center;gap:8px}
+.progress{height:6px;background:var(--secondary);border-radius:6px;overflow:hidden}
+.progress::after{content:"";display:block;height:100%;width:40%;background:var(--ring);animation:load 1s infinite}
+section.chart .progress{margin-bottom:10px}
+@keyframes load{0%{transform:translateX(-40%)}50%{transform:translateX(60%)}100%{transform:translateX(160%)}}
+.chartSelect select{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none}
+.placeholder{border:2px dashed var(--border);border-radius:12px;background:var(--secondary);min-height:360px;display:flex;align-items:center;justify-content:center}
+.placeholderInner{text-align:center}
+.phTitle{font-size:18px;font-weight:600;color:var(--foreground)}
+.phDesc{font-size:14px;color:var(--muted-foreground);margin-top:6px}
+.chartBox img{width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.download{margin-top:12px;display:flex;justify-content:flex-end}

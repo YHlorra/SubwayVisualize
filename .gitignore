@@ -2,6 +2,9 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.trae
+.env
+.tests
 
 # C extensions
 *.so
@@ -195,6 +198,17 @@ cython_debug/
 .pypirc
 
 # Cursor
+
+# Project outputs
+地铁租房指数可视化结果/
+地铁空间数据/
+AJK.csv
+厦门市地铁.xlsx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
