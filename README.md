@@ -21,9 +21,10 @@
 
 - 安装依赖：
 ```bash
-pip install -r requirements.txt`
+pip install -r requirements.txt
 ```
 - 启动服务：`python api/main.py`（内部使用 Waitress 监听 5000 端口）
+- 或使用脚本：`powershell -ExecutionPolicy Bypass -File start.ps1`
 - 访问页面：打开浏览器访问 `http://127.0.0.1:5000/`
 
 ## 前后端接口

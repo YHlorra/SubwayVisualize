@@ -1,9 +1,9 @@
 Write-Host "[SubwayVisualize] 初始化依赖并启动Flask" -ForegroundColor Cyan
 
-# 后端依赖
-if (Test-Path "api/requirements.txt") {
-  Write-Host "[Backend] 安装依赖..." -ForegroundColor Yellow
-  pip install -r api/requirements.txt | Out-Null
+# 依赖安装（使用根目录 requirements.txt）
+if (Test-Path "requirements.txt") {
+  Write-Host "[Deps] 安装依赖..." -ForegroundColor Yellow
+  pip install -r requirements.txt | Out-Null
 }
 
 Write-Host "[Frontend] 跳过前端依赖安装（使用Flask模板页面）" -ForegroundColor Yellow

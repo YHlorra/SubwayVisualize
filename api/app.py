@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
-import os, io, base64, time
+import os, io, base64, time, atexit, shutil
 import pandas as pd
 import requests
 import re
@@ -15,6 +15,18 @@ app = Flask(__name__)
 CORS(app)
 
 CITY_CACHE = {"ts": 0, "list": []}
+
+OUTPUT_DIR_NAME = "地铁租房指数可视化结果"
+
+def _cleanup_outputs():
+    try:
+        p = os.path.join(os.getcwd(), OUTPUT_DIR_NAME)
+        if os.path.exists(p):
+            shutil.rmtree(p)
+    except Exception:
+        pass
+
+atexit.register(_cleanup_outputs)
 
 def _fetch_cities():
     try:
@@ -199,6 +211,11 @@ def download_chart():
         as_attachment=True,
         download_name=chart_name
     )
+
+@app.route("/api/cleanup", methods=["POST"])
+def cleanup():
+    _cleanup_outputs()
+    return jsonify({"ok": True})
 
 @app.route("/")
 def home():

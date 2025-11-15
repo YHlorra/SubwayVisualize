@@ -232,6 +232,13 @@
       document.body.appendChild(a); a.click(); a.remove()
     })
 
+    window.addEventListener('beforeunload', () => {
+      try {
+        const data = new Blob([JSON.stringify({})], { type: 'application/json' })
+        navigator.sendBeacon('/api/cleanup', data)
+      } catch (e) {}
+    })
+
     loadCities()
   </script>
 </body>
