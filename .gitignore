@@ -5,7 +5,8 @@ __pycache__/
 .trae
 .env
 .tests
-
+.miniprogram  
+miniprogram/
 # C extensions
 *.so
 

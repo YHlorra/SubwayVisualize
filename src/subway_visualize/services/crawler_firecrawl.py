@@ -2,7 +2,7 @@ import requests
 from typing import List, Dict, Any
 from html.parser import HTMLParser
 from urllib.parse import urljoin
-from config import get_firecrawl_settings
+from ..config import get_firecrawl_settings
 
 class _AnchorParser(HTMLParser):
     def __init__(self, base_url: str = ''):

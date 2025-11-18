@@ -599,6 +599,7 @@ class SubwayRentalVisualizer:
             return {}
         line_order = self.line_stations['name'].tolist()
         valid_stations = [s for s in line_order if s in self.analysis_results['station'].values]
+        valid_stations = list(dict.fromkeys(valid_stations))
         self.analysis_results['station'] = pd.Categorical(self.analysis_results['station'], categories=valid_stations, ordered=True)
         sorted_by_line = self.analysis_results.sort_values('station')
         chart_files = {}

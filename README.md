@@ -1,6 +1,10 @@
-# SubwayVisualize
+# 轨住图谱
 
-一个“地铁租房数据分析与可视化”项目，支持多城市。后端基于 Flask，前端为简易页面，数据源为高德地铁与安居客租房。
+重要提示：本项目数据来自网络公开信息，可能存在不准确或虚假，仅供参考；租房务必谨慎，务必自行核实并当面确认，避免风险。
+
+![示意图](https://my-buxket.oss-cn-beijing.aliyuncs.com/20251116084911.png)
+
+一个“地铁租房数据可视化”项目，支持多城市。后端基于 Flask，前端为简易页面，数据源为高德地铁与安居客租房。
 
 **数据声明**：数据均来自公开网站，仅供学习与参考，不构成任何建议。
 
@@ -20,10 +24,12 @@
 ## 运行与使用
 
 - 安装依赖：
+
 ```bash
 pip install -r requirements.txt
 ```
-- 启动服务：`python api/main.py`（内部使用 Waitress 监听 5000 端口）
+
+- 启动服务：`python serve.py`（Waitress 监听 5000 端口）
 - 或使用脚本：`powershell -ExecutionPolicy Bypass -File start.ps1`
 - 访问页面：打开浏览器访问 `http://127.0.0.1:5000/`
 
@@ -42,16 +48,27 @@ pip install -r requirements.txt
 
 ## 目录结构（核心）
 
-- `api/app.py`：Flask 路由与参数校验、错误提示
-- `api/services/subway_visualize.py`：数据抓取、解析与可视化
-- `api/static/anjuke_city_map.json`：安居客城市与子域缩写映射（来自城市页）
-- `api/templates/index.html`：前端页面
+- `src/subway_visualize/app.py`：Flask 路由与参数校验、错误提示
+- `src/subway_visualize/main.py`：生产服务入口（Waitress 监听 5000）
+- `src/subway_visualize/templates/index.html`：前端页面
+- `src/subway_visualize/static/style.css`：样式文件
+- `src/subway_visualize/static/anjuke_city_map.json`：安居客城市与子域缩写映射
+- `src/subway_visualize/services/subway_visualize.py`：数据抓取、解析与可视化
+- `src/subway_visualize/services/crawler_firecrawl.py`：抓取辅助（如启用 Firecrawl）
+- `src/subway_visualize/config.py`：配置与环境变量读取
+- `requirements.txt`：依赖列表
+- `start.ps1`：Windows 启动脚本
+- `serve.py`：统一启动入口（自动注入 src 并启动服务）
+- `.env.example`：环境变量示例
+- `.gitignore`：包含 `miniprogram/`（小程序目录，已忽略不随仓库提交）
 
 ## 关键实现说明
 
 - 城市缩写解析统一：通过 `get_city_spell_by_name` 从 `anjuke_city_map.json` 获取安居客缩写；后端不再依赖高德 `spell` 或本地硬编码字典
 - 抓取限流处理：识别“访问过于频繁/请稍后再试/验证”等提示，触发限流并返回友好错误；增加随机等待与页面停留时间降低触发概率
 - 可视化输出：生成多类图表与综合图，并支持前端下载
+- 下载优化：前端直接使用浏览器保存图片（data URL），无需后端参与，提升可用性与易发现性
+- 状态栏：图表区下方实时显示任务进度（开始分析 / 已加载地铁线路 / 开始抓取房产 / 已获取房产数量 / 生成图表 / 分析完成），遇到问题显示错误代码与解决建议
 
 ## 注意事项
 

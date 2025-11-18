@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>地铁数据分析系统</title>
+  <title>轨住图谱</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <header class="header">
-    <h1>地铁数据分析系统</h1>
+    <h1>轨住图谱</h1>
     <p>选择城市和地铁线路，开始数据抓取与分析</p>
   </header>
 
@@ -39,14 +39,13 @@
     </section>
 
     <section class="chart">
-      <div class="chartHeader">
-        <h2>数据可视化</h2>
-        <div class="chartSelect" id="chartSelectWrap">
-          <span>选择图表</span>
-          <select id="chartSelect" disabled></select>
+        <div class="chartHeader">
+          <h2>数据可视化</h2>
+          <div class="chartSelect" id="chartSelectWrap">
+            <span>选择图表</span>
+            <select id="chartSelect" disabled></select>
+          </div>
         </div>
-        <div id="errorRight" class="error" style="display:none"></div>
-      </div>
       <div id="progress" class="progress" style="display:none"></div>
       <div id="placeholder" class="placeholder">
         <div class="placeholderInner">
@@ -60,6 +59,7 @@
           <button id="downloadBtn">下载图表</button>
         </div>
       </div>
+      <div id="errorDetails" class="output" style="display:none"></div>
     </section>
   </main>
 
@@ -76,7 +76,7 @@
     const chartBoxEl = document.getElementById('chartBox')
     const chartImgEl = document.getElementById('chartImg')
     const downloadBtn = document.getElementById('downloadBtn')
-    const errorRight = document.getElementById('errorRight')
+    const errorDetails = document.getElementById('errorDetails')
 
     const citySpellByName = {}
     let currentCitySpell = ''
@@ -101,7 +101,6 @@
         citySpellByName[c.name] = c.spell
         cityListEl.appendChild(opt)
       })
-      if (citySpellByName['厦门市']) cityInputEl.value = '厦门市'
       chartSelectEl.innerHTML = ''
       const placeholderOpt = document.createElement('option')
       placeholderOpt.value = ''
@@ -109,11 +108,17 @@
       chartSelectEl.appendChild(placeholderOpt)
       chartSelectEl.disabled = true
       chartSelectWrap.style.display = 'flex'
-      await loadLines()
     }
 
     async function loadLines() {
       errorEl.style.display = 'none'
+      if (!(cityInputEl.value && cityInputEl.value.trim())) {
+        lineEl.disabled = true
+        lineEl.innerHTML = ''
+        errorEl.textContent = '请先选择城市'
+        errorEl.style.display = 'inline'
+        return
+      }
       try {
         lineEl.disabled = true
         lineEl.innerHTML = ''
@@ -139,7 +144,14 @@
       }
     }
 
-    cityInputEl.addEventListener('change', loadLines)
+    cityInputEl.addEventListener('change', () => {
+      if (cityInputEl.value && cityInputEl.value.trim()) {
+        loadLines()
+      } else {
+        lineEl.innerHTML = ''
+        lineEl.disabled = true
+      }
+    })
     cityInputEl.addEventListener('input', () => { errorEl.style.display = 'none' })
 
     analyzeBtn.addEventListener('click', async () => {
@@ -150,7 +162,6 @@
       cityInputEl.disabled = true
       lineEl.disabled = true
       errorEl.style.display = 'none'
-      errorRight.style.display = 'none'
       charts = []
       chartSelectEl.innerHTML = ''
       const placeholderOpt = document.createElement('option')
@@ -161,12 +172,34 @@
       chartSelectWrap.style.display = 'flex'
       placeholderEl.style.display = 'block'
       chartBoxEl.style.display = 'none'
+      errorDetails.style.display = 'none'
+      let pollTimer = null
+      // 初始状态提示，避免轮询前空白
+      errorDetails.textContent = '准备开始分析...'
+      errorDetails.style.display = 'block'
+      const startPoll = () => {
+        if (pollTimer) clearInterval(pollTimer)
+        pollTimer = setInterval(async () => {
+          try {
+            const r2 = await fetch('/api/progress?rid=' + requestId)
+            const arr = await r2.json()
+            if (Array.isArray(arr) && arr.length) {
+              errorDetails.style.display = 'block'
+              errorDetails.innerHTML = arr.map(x => x.msg).join(' / ')
+            }
+          } catch {}
+        }, 1000)
+      }
+      startPoll()
       const requestId = ++currentRequestId
       try {
+        if (!(cityInputEl.value && cityInputEl.value.trim())) {
+          throw new Error('请选择城市')
+        }
         const lineNum = (lineEl.value.match(/\d+/) || [''])[0]
         const r = await fetch('/api/analyze', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ city: cityInputEl.value, line: lineNum, pages: Number(pagesEl.value), city_spell: currentCitySpell })
+          body: JSON.stringify({ city: cityInputEl.value, line: lineNum, pages: Number(pagesEl.value), city_spell: currentCitySpell, request_id: String(requestId) })
         })
         if (!r.ok) {
           const err = await r.json().catch(() => ({}))
@@ -189,25 +222,57 @@
           chartImgEl.src = 'data:image/png;base64,' + b64
           placeholderEl.style.display = 'none'
           chartBoxEl.style.display = 'block'
-          errorRight.style.display = 'none'
+          errorDetails.style.display = 'none'
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
         } else if (combined) {
           selectedKey = 'combined'
           chartImgEl.src = 'data:image/png;base64,' + combined.b64
           placeholderEl.style.display = 'none'
           chartBoxEl.style.display = 'block'
-          errorRight.style.display = 'none'
+          errorDetails.style.display = 'none'
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
         }
       } catch (e) {
-        errorEl.textContent = e.message || '分析失败'
+        const msg = (e && e.message) ? String(e.message) : '分析失败'
+        const short = (() => {
+          if (msg.includes('未识别到城市代码')) return '城市代码缺失'
+          if (msg.includes('城市名称不正确') || msg.includes('未开通地铁')) return '城市无效'
+          if (msg.includes('访问过于频繁') || msg.includes('稍后再试')) return '访问过于频繁'
+          if (msg.includes('未获取到有效房源数据')) return '暂无数据'
+          if (msg.includes('抓取失败')) return '抓取失败'
+          if (msg.includes('Failed to fetch')) return '网络错误或服务未启动'
+          return '分析失败'
+        })()
+        const code = (() => {
+          if (msg.includes('访问过于频繁')) return 'RATE_LIMIT'
+          if (msg.includes('未识别到城市代码')) return 'CITY_CODE'
+          if (msg.includes('城市名称不正确') || msg.includes('未开通地铁')) return 'CITY_INVALID'
+          if (msg.includes('未获取到有效房源数据')) return 'NO_DATA'
+          if (msg.includes('抓取失败')) return 'FETCH_FAIL'
+          if (msg.includes('Failed to fetch')) return 'NETWORK'
+          return 'UNKNOWN'
+        })()
+        const suggest = (() => {
+          if (code === 'RATE_LIMIT') return '降低抓取页数，间隔几分钟后重试；必要时启用 Firecrawl。'
+          if (code === 'CITY_CODE') return '请从城市列表选择城市后再分析，不要输入拼音或缩写。'
+          if (code === 'CITY_INVALID') return '请确认城市名称正确且已开通地铁；尝试其他城市。'
+          if (code === 'NO_DATA') return '更换线路或减少抓取页数后重试；稍后再试。'
+          if (code === 'FETCH_FAIL') return '稍后再试或降低抓取页数；检查网络与访问频率。'
+          if (code === 'NETWORK') return '确认后端已启动并可访问 http://127.0.0.1:5000/；检查网络设置。'
+          return '请稍后重试，或调整参数后再次分析。'
+        })()
+        errorEl.textContent = short
         errorEl.style.display = 'inline'
-        errorRight.textContent = e.message || '分析失败'
-        errorRight.style.display = 'block'
+        errorDetails.innerHTML = `状态：${short}<br/>错误代码：${code}<br/>详细信息：${msg}<br/>解决方法：${suggest}`
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+        errorDetails.style.display = 'block'
       } finally {
         document.getElementById('progress').style.display = 'none'
         isLoading = false
         analyzeBtn.disabled = false
         cityInputEl.disabled = false
         lineEl.disabled = false
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
       }
     })
 
@@ -217,18 +282,14 @@
       if (sel) chartImgEl.src = 'data:image/png;base64,' + sel.b64
     })
 
-    downloadBtn.addEventListener('click', async () => {
+    downloadBtn.addEventListener('click', () => {
       let sel = charts.find(c => c.key === selectedKey)
       if (!sel && combined) sel = combined
-      if (!sel) return
-      const r = await fetch('/api/download/chart', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chart_b64: sel.b64, chart_name: sel.name || 'chart.png' })
-      })
-      const blob = await r.blob()
-      const url = URL.createObjectURL(blob)
+      if (!sel || !sel.b64) return
       const a = document.createElement('a')
-      a.href = url; a.download = sel.name || 'chart.png'
+      const name = (sel.name && sel.name.endsWith('.png')) ? sel.name : (sel.name ? (sel.name + '.png') : 'chart.png')
+      a.href = 'data:image/png;base64,' + sel.b64
+      a.download = name
       document.body.appendChild(a); a.click(); a.remove()
     })
 

@@ -4,17 +4,19 @@ import os, io, base64, time, atexit, shutil
 import pandas as pd
 import requests
 import re
-from services.subway_visualize import (
+from .services.subway_visualize import (
     fetch_subway,
     SubwayRentalVisualizer,
     fetch_anjuke_rentals_unified,
     get_city_spell_by_name,
 )
 
-app = Flask(__name__)
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, template_folder=os.path.join(_BASE_DIR, "templates"), static_folder=os.path.join(_BASE_DIR, "static"))
 CORS(app)
 
 CITY_CACHE = {"ts": 0, "list": []}
+PROGRESS = {}
 
 OUTPUT_DIR_NAME = "地铁租房指数可视化结果"
 
@@ -126,6 +128,10 @@ def analyze():
     city = _normalize_city_name(data.get("city", "厦门市"))
     line_number = int(data.get("line", 2))
     max_pages = int(data.get("pages", 10))
+    rid = str(data.get("request_id") or "")
+    if rid:
+        PROGRESS[rid] = []
+        PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "开始分析"})
     short0, _rent0 = get_city_spell_by_name(city)
     if not short0 and city.endswith('市'):
         short0, _rent0 = get_city_spell_by_name(city[:-1])
@@ -133,6 +139,8 @@ def analyze():
     print("ANALYZE_CITY", city)
 
     gdf, city_tag = fetch_subway(city)
+    if rid:
+        PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "已加载地铁线路"})
     if gdf is None:
         try:
             from urllib.parse import quote
@@ -152,19 +160,35 @@ def analyze():
         print("ANALYZE_ERR", "未识别到城市拼写", city)
         return jsonify({"error": "未识别到城市代码，请从列表选择城市后重试"}), 400
     try:
+        if rid:
+            PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "开始抓取房产"})
         rentals_df = fetch_anjuke_rentals_unified(
             city_spell,
             line_number,
             max_pages,
             city_name=city,
         )
+        if rid:
+            n = 0
+            try:
+                if isinstance(rentals_df, pd.DataFrame):
+                    n = len(rentals_df)
+            except Exception:
+                n = 0
+            PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": f"已获取房产 {n} 条"})
     except Exception as e:
         em = str(e) if e else ""
         print("ANALYZE_ERR", "安居客数据抓取失败", em)
         if "RATE_LIMIT" in em:
+            if rid:
+                PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "访问过于频繁"})
             return jsonify({"error": "访问过于频繁，请稍后再试或降低抓取页数"}), 429
+        if rid:
+            PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "抓取失败"})
         return jsonify({"error": "安居客抓取失败，请稍后再试或减少页数"}), 400
     vis = SubwayRentalVisualizer(subway_gdf=gdf, rental_df=rentals_df, city_tag=city_tag, line_number=line_number)
+    if rid:
+        PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "开始分析并生成图表"})
     vis.run_full_analysis()
     results = vis.analysis_results
     if results is None or len(results) == 0:
@@ -175,6 +199,8 @@ def analyze():
             print("ANALYZE_ERR", "未获取到有效房源数据", "df_len", n, "city", city, "spell", city_spell, "line", line_number)
         except Exception:
             pass
+        if rid:
+            PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "暂无数据"})
         return jsonify({"error": "未获取到有效房源数据：可能访问频率过高或线路入口暂无数据。请减少抓取页数、稍后再试或更换线路"}), 400
     chart_files = vis.visualize_rental_index()
     combined_path = chart_files.get("combined")
@@ -191,6 +217,8 @@ def analyze():
         with open(combined_path, "rb") as f:
             combined_b64 = base64.b64encode(f.read()).decode()
         combined_name = os.path.basename(combined_path)
+    if rid:
+        PROGRESS[rid].append({"ts": int(time.time()*1000), "msg": "分析完成"})
     return jsonify({
         "table": results.to_dict(orient="records"),
         "charts": charts,
@@ -216,6 +244,13 @@ def download_chart():
 def cleanup():
     _cleanup_outputs()
     return jsonify({"ok": True})
+
+@app.route("/api/progress", methods=["GET"])
+def progress():
+    rid = request.args.get("rid") or ""
+    if not rid:
+        return jsonify([])
+    return jsonify(PROGRESS.get(rid) or [])
 
 @app.route("/")
 def home():

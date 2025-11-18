@@ -1,4 +1,4 @@
-Write-Host "[SubwayVisualize] 初始化依赖并启动Flask" -ForegroundColor Cyan
+Write-Host "[轨住图谱] 初始化依赖并启动Flask" -ForegroundColor Cyan
 
 # 依赖安装（使用根目录 requirements.txt）
 if (Test-Path "requirements.txt") {
@@ -19,7 +19,7 @@ if (Test-Path $envPath) {
     }
   } catch {}
 }
-Start-Process -FilePath python -ArgumentList "api/main.py"
+Start-Process -FilePath python -ArgumentList "serve.py"
 Start-Sleep -Seconds 1
 Start-Process "http://127.0.0.1:5000/"
 Write-Host "[OK] 已启动，浏览器访问 http://127.0.0.1:5000/" -ForegroundColor Cyan

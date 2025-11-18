@@ -50,3 +50,4 @@ section.chart .progress{margin-bottom:10px}
 .phDesc{font-size:14px;color:var(--muted-foreground);margin-top:6px}
 .chartBox img{width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .download{margin-top:12px;display:flex;justify-content:flex-end}
+.output{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--foreground);font-size:14px;margin-top:12px}
