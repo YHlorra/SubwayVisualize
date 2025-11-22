@@ -13,6 +13,7 @@ from shapely.geometry import Point
 import json
 import random
 from .crawler_firecrawl import collect_anchors_with_firecrawl, firecrawl_enabled, fetch_html_with_firecrawl
+from .proxy_pool import safe_request, get_proxy_session
 _SUBWAY_CACHE = {}
 _USE_BROWSER = True
 _CITY_MAP_CACHE = None
@@ -28,8 +29,13 @@ def load_city_map():
             raw = json.load(f)
         # 仅保留高德地铁已开通的城市
         try:
-            s = requests.Session()
-            j = s.get('https://map.amap.com/service/subway?_1707184339116&srhdata=citylist.json', timeout=10).json()
+            response = safe_request(
+                'https://map.amap.com/service/subway?_1707184339116&srhdata=citylist.json',
+                pool_name='subway',
+                max_retries=3,
+                retry_delay=0.6
+            )
+            j = response.json()
             names = set()
             for c in j.get('citylist', []):
                 nm = (c.get('cityname') or '').strip()
@@ -63,18 +69,27 @@ def fetch_subway(Target_city):
     it = _SUBWAY_CACHE.get(key)
     if it and (time.time() - it[0] < 7200):
         return it[1]
-    s = requests.Session()
+    
     citylist = None
     for _ in range(3):
         try:
-            citylist = s.get('https://map.amap.com/service/subway?_1707184339116&srhdata=citylist.json', timeout=10).json()
+            response = safe_request(
+                'https://map.amap.com/service/subway?_1707184339116&srhdata=citylist.json',
+                pool_name='subway',
+                max_retries=1,
+                retry_delay=0.6
+            )
+            citylist = response.json()
             break
         except Exception:
-            time.sleep(0.6)
+            if _ < 2:
+                time.sleep(0.6)
+    
     if not isinstance(citylist, dict) or ('citylist' not in citylist):
         if it:
             return it[1]
         return None, None
+    
     spell = ''
     adcode = ''
     for city in citylist['citylist']:
@@ -82,22 +97,33 @@ def fetch_subway(Target_city):
             spell = city.get('spell')
             adcode = city.get('adcode')
             break
+    
     if not spell or not adcode:
         if it:
             return it[1]
         return None, None
+    
     city_url = f'https://map.amap.com/service/subway?_1707184339123&srhdata={adcode}_drw_{spell}.json'
     target_city = None
+    
     for _ in range(3):
         try:
-            target_city = s.get(city_url, timeout=10).json()
+            response = safe_request(
+                city_url,
+                pool_name='subway',
+                max_retries=1,
+                retry_delay=0.6
+            )
+            target_city = response.json()
             break
         except Exception:
-            time.sleep(0.6)
+            if _ < 2:
+                time.sleep(0.6)
     if not isinstance(target_city, dict) or ('l' not in target_city):
         if it:
             return it[1]
         return None, None
+    
     name_tag = target_city.get('s', Target_city)
     result = {'name': [], 'line': [], 'lon': [], 'lat': []}
     for line in range(len(target_city['l'])):
@@ -118,16 +144,25 @@ def fetch_subway(Target_city):
 
 
 def resolve_anjuke_line_codes(city_spell='xm'):
-    s = requests.Session()
-    headers = {'User-Agent': 'Mozilla/5.0', 'Referer': f'https://{city_spell}.zu.anjuke.com/ditie/'}
     url = f'https://{city_spell}.zu.anjuke.com/ditie/'
     try:
         html = None
         if firecrawl_enabled():
             html = fetch_html_with_firecrawl(url)
+        
         if not html:
-            r = s.get(url, headers=headers, timeout=10)
-            html = r.text
+            # 使用IP池发送请求
+            headers = {'User-Agent': 'Mozilla/5.0', 'Referer': f'https://{city_spell}.zu.anjuke.com/ditie/'}
+            response = safe_request(
+                url,
+                pool_name='anjuke',
+                max_retries=3,
+                retry_delay=1.0,
+                headers=headers,
+                timeout=10
+            )
+            html = response.text
+        
         soup = BeautifulSoup(html, 'html.parser')
         mapping = {}
         for a in soup.find_all('a', href=True):
@@ -170,17 +205,26 @@ def resolve_anjuke_line_codes(city_spell='xm'):
         return {}
 
 def collect_anjuke_anchors(city_spell='xm'):
-    s = requests.Session()
-    headers = {'User-Agent': 'Mozilla/5.0', 'Referer': f'https://{city_spell}.zu.anjuke.com/ditie/'}
     url = f'https://{city_spell}.zu.anjuke.com/ditie/'
     out = []
     try:
         html = None
         if firecrawl_enabled():
             html = fetch_html_with_firecrawl(url)
+        
         if not html:
-            r = s.get(url, headers=headers, timeout=10)
-            html = r.text
+            # 使用IP池发送请求
+            headers = {'User-Agent': 'Mozilla/5.0', 'Referer': f'https://{city_spell}.zu.anjuke.com/ditie/'}
+            response = safe_request(
+                url,
+                pool_name='anjuke',
+                max_retries=3,
+                retry_delay=1.0,
+                headers=headers,
+                timeout=10
+            )
+            html = response.text
+        
         soup = BeautifulSoup(html, 'html.parser')
         nodes = soup.select('.sub-items.sub-level1 a') or soup.find_all('a', href=True)
         for a in nodes:

@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from html.parser import HTMLParser
 from urllib.parse import urljoin
 from ..config import get_firecrawl_settings
+from .proxy_pool import safe_request, get_proxy_session
 
 class _AnchorParser(HTMLParser):
     def __init__(self, base_url: str = ''):
@@ -62,9 +63,18 @@ def collect_anchors_with_firecrawl(url: str) -> List[Dict[str, str]]:
         'maxAge': 172800000,
     }
     try:
-        r = requests.post(api, headers=headers, json=body, timeout=timeout)
-        r.raise_for_status()
-        j = r.json()
+        # 使用IP池发送请求
+        response = safe_request(
+            api,
+            method='POST',
+            pool_name='firecrawl',
+            max_retries=3,
+            retry_delay=1.0,
+            headers=headers,
+            json=body,
+            timeout=timeout
+        )
+        j = response.json()
         data = j.get('data') or {}
         html = data.get('html') or ''
         if not html:
@@ -95,9 +105,18 @@ def probe_list_page(url: str) -> bool:
         'maxAge': 172800000,
     }
     try:
-        r = requests.post(api, headers=headers, json=body, timeout=timeout)
-        r.raise_for_status()
-        j = r.json()
+        # 使用IP池发送请求
+        response = safe_request(
+            api,
+            method='POST',
+            pool_name='firecrawl',
+            max_retries=3,
+            retry_delay=1.0,
+            headers=headers,
+            json=body,
+            timeout=timeout
+        )
+        j = response.json()
         data = j.get('data') or {}
         html = (data.get('html') or '').lower()
         if not html:
@@ -127,9 +146,18 @@ def fetch_html_with_firecrawl(url: str) -> str:
         'maxAge': 60000,
     }
     try:
-        r = requests.post(api, headers=headers, json=body, timeout=timeout)
-        r.raise_for_status()
-        j = r.json()
+        # 使用IP池发送请求
+        response = safe_request(
+            api,
+            method='POST',
+            pool_name='firecrawl',
+            max_retries=3,
+            retry_delay=1.0,
+            headers=headers,
+            json=body,
+            timeout=timeout
+        )
+        j = response.json()
         data = j.get('data') or {}
         html = data.get('html') or ''
         return html or ''
