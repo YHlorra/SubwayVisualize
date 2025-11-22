@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# 虚拟环境
+venv
+.venv
+
+# Python 缓存
+__pycache__
+*.pyc
+*.pyo
+
+# IDE 和编辑器配置
+.idea
+.vscode
+
+# 其他
+.env

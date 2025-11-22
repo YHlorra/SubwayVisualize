@@ -1,93 +1,167 @@
 # 轨住图谱
 
-重要提示：本项目数据来自网络公开信息，可能存在不准确或虚假，仅供参考；租房务必谨慎，务必自行核实并当面确认，避免风险。
+<p align="center">
+  <img src="https://my-buxket.oss-cn-beijing.aliyuncs.com/20251116084911.png" alt="示意图" width="70%"/>
+</p>
 
-![示意图](https://my-buxket.oss-cn-beijing.aliyuncs.com/20251116084911.png)
+<p align="center">
+  一个“地铁租房数据可视化”项目，支持多城市。
+</p>
 
-一个“地铁租房数据可视化”项目，支持多城市。后端基于 Flask，前端为简易页面，数据源为高德地铁与安居客租房。
+---
 
-**数据声明**：数据均来自公开网站，仅供学习与参考，不构成任何建议。
+### ⚠️ 重要声明
+
+本项目为个人学习与技术交流的开源实践，**严禁用于任何商业用途**。
+
+所有数据均采集自公开网络资源，项目本身不对数据的准确性、完整性或时效性提供任何保证。所有分析结果仅供参考，不构成任何投资或决策建议。
+
+在进行租房等实际决策时，请务必通过官方和正规渠道获取并核实信息，注意防范风险。
+
+---
+
+## 目录
+
+- [功能特点](#功能特点)
+- [上手指南](#上手指南)
+  - [环境要求](#环境要求)
+  - [安装与运行](#安装与运行)
+  - [通过-Docker-部署-推荐](#通过-docker-部署-推荐)
+- [接口说明](#接口说明)
+- [常见问题](#常见问题)
+- [项目结构](#项目结构)
+- [如何贡献](#如何贡献)
+- [鸣谢](#鸣谢)
+- [许可证](#许可证)
 
 ## 功能特点
 
-- 地铁站点数据获取与处理
-- 租房数据抓取与清洗
-- 空间分析与图表可视化
-- 多城市支持，城市代码统一来自安居客城市页
+- 自动获取并处理多城市的地铁线路和站点数据。
+- 抓取指定地铁线路周边的租房信息。
+- 对租房数据进行清洗、分析，并生成可视化图表。
+- 支持多城市，动态适应不同城市的数据源。
 
-## 数据来源
+## 上手指南
 
-- 地铁：`https://map.amap.com/service/subway`
-- 安居客城市页：`https://www.anjuke.com/sy-city.html`
-- 安居客租房入口示例：`https://cs.zu.anjuke.com/ditie/`
+请遵循以下步骤在你的本地环境中运行本项目。
 
-## 运行与使用
+### 环境要求
 
-- 安装依赖：
+- Python 3.x
+- 一个能够连接网络的环境
 
-```bash
-pip install -r requirements.txt
-```
+### 安装与运行
 
-- 启动服务：`python serve.py`（Waitress 监听 5000 端口）
-- 或使用脚本：`powershell -ExecutionPolicy Bypass -File start.ps1`
-- 访问页面：打开浏览器访问 `http://127.0.0.1:5000/`
+1.  **克隆仓库**
+    ```bash
+    git clone https://github.com/your_username/your_repository.git
+    ```
 
-## 前后端接口
+2.  **安装依赖**
+    进入项目目录，然后运行：
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-- `GET /api/cities`：返回地铁已开通城市列表（高德）
-- `GET|POST /api/subway?city=城市名`：返回该城市地铁站点、线路与安居客城市缩写 `city_spell`
-- `POST /api/analyze`：参数：`city`、`line`（数字）、`pages`（抓取页数）、`city_spell`（可选）。返回图表与分析结果；遇到限流或无数据时返回友好错误。
+3.  **启动服务**
+    -   **方式一**：通过 `serve.py` 启动 (推荐)
+        ```bash
+        python serve.py
+        ```
+    -   **方式二**：使用 PowerShell 脚本 (仅限 Windows)
+        ```powershell
+        powershell -ExecutionPolicy Bypass -File start.ps1
+        ```
+    服务启动后，默认监听 `5000` 端口。
 
-## 常见错误与解决
+4.  **访问应用**
+    打开浏览器，访问 `http://127.0.0.1:5000/` 即可开始使用。
 
-- `城市名称不正确或未开通地铁`：请从下拉列表选择有效城市
-- `未识别到城市代码，请从列表选择城市后重试`：请勿手输拼音，直接选择城市名
-- `访问过于频繁，请稍后再试或降低抓取页数`：降低 `pages`，间隔几分钟重试
-- `未获取到有效房源数据`：可能访问频率过高或线路入口暂无数据。请减少抓取页数、稍后再试或更换线路
+### 通过 Docker 部署 (推荐)
 
-## 目录结构（核心）
+如果你熟悉 Docker，我们强烈推荐使用容器化方式来运行本项目，这样可以免去环境配置的麻烦。
 
-- `src/subway_visualize/app.py`：Flask 路由与参数校验、错误提示
-- `src/subway_visualize/main.py`：生产服务入口（Waitress 监听 5000）
-- `src/subway_visualize/templates/index.html`：前端页面
-- `src/subway_visualize/static/style.css`：样式文件
-- `src/subway_visualize/static/anjuke_city_map.json`：安居客城市与子域缩写映射
-- `src/subway_visualize/services/subway_visualize.py`：数据抓取、解析与可视化
-- `src/subway_visualize/services/crawler_firecrawl.py`：抓取辅助（如启用 Firecrawl）
-- `src/subway_visualize/config.py`：配置与环境变量读取
-- `requirements.txt`：依赖列表
-- `start.ps1`：Windows 启动脚本
-- `serve.py`：统一启动入口（自动注入 src 并启动服务）
-- `.env.example`：环境变量示例
-- `.gitignore`：包含 `miniprogram/`（小程序目录，已忽略不随仓库提交）
+1.  **构建镜像**
+    在项目根目录下运行：
+    ```bash
+    docker build -t subway-visualize .
+    ```
 
-## 关键实现说明
+2.  **运行容器**
+    ```bash
+    docker run -d -p 5000:5000 -a_name subway-app subway-visualize
+    ```
+    -   `-d`：在后台运行容器。
+    -   `-p 5000:5000`：将主机的 5000 端口映射到容器的 5000 端口。
+    -   `-a_name subway-app`：为容器指定一个名称，方便管理。
 
-- 城市缩写解析统一：通过 `get_city_spell_by_name` 从 `anjuke_city_map.json` 获取安居客缩写；后端不再依赖高德 `spell` 或本地硬编码字典
-- 抓取限流处理：识别“访问过于频繁/请稍后再试/验证”等提示，触发限流并返回友好错误；增加随机等待与页面停留时间降低触发概率
-- 可视化输出：生成多类图表与综合图，并支持前端下载
-- 下载优化：前端直接使用浏览器保存图片（data URL），无需后端参与，提升可用性与易发现性
-- 状态栏：图表区下方实时显示任务进度（开始分析 / 已加载地铁线路 / 开始抓取房产 / 已获取房产数量 / 生成图表 / 分析完成），遇到问题显示错误代码与解决建议
+3.  **访问应用**
+    打开浏览器，访问 `http://127.0.0.1:5000/`。
 
-## 注意事项
+4.  **查看日志或停止容器**
+    ```bash
+    # 查看实时日志
+    docker logs -f subway-app
 
-- 网站结构或策略变更可能影响抓取，需要适配
-- 避免短时间大量请求，建议减小抓取页数并分时段重试
+    # 停止并移除容器
+    docker stop subway-app
+    docker rm subway-app
+    ```
 
-### 关于 Firecrawl
+## 接口说明
 
-- 若未启用 Firecrawl，部分城市与线路页面因动态渲染或反爬策略，抓取可能失败或返回空数据。
-- 常见表现：页面提示“访问过于频繁/请稍后再试/验证”，或分析结果显示“未获取到有效房源数据”。
-- 建议：
-  - 启用 Firecrawl
-  - 将抓取页数 `pages` 调小，并分时段重试。
-  - 对于频繁失败的线路，尝试更换线路或稍后再试。
+项目提供以下后端接口：
+
+-   `GET /api/cities`：返回所有已开通地铁的城市列表。
+-   `GET|POST /api/subway?city=城市名`：获取指定城市的地铁线路、站点信息。
+-   `POST /api/analyze`：执行核心分析任务。
+    -   **参数**: `city` (城市名), `line` (线路编号), `pages` (抓取页数)。
+    -   **返回**: 成功时返回分析图表；失败时返回错误信息。
+
+## 常见问题
+
+-   **提示“城市名称不正确或未开通地铁”**
+    请确保从前端页面的下拉列表中选择城市，不要手动输入。
+
+-   **提示“访问过于频繁”或“未获取到有效房源数据”**
+    这通常是由于目标网站的反爬虫机制导致。请尝试以下操作：
+    1.  减少“抓取页数” (`pages` 参数)。
+    2.  等待几分钟后重试。
+    3.  更换其他地铁线路进行尝试。
+    4.  （进阶）配置并启用 Firecrawl 等更强的抓取服务。
+
+## 项目结构
+
+核心文件与目录说明如下：
+
+-   `src/subway_visualize/app.py`：Flask 路由与参数校验。
+-   `src/subway_visualize/services/subway_visualize.py`：核心服务，负责数据抓取、清洗与可视化。
+-   `src/subway_visualize/templates/index.html`：前端页面。
+-   `src/subway_visualize/static/`：存放 CSS、JSON 等静态资源。
+-   `serve.py`：项目统一启动入口。
+-   `requirements.txt`：Python 依赖包列表。
+-   `.env.example`：环境变量配置示例。
+
+## 如何贡献
+
+我们非常欢迎社区的贡献！你可以通过以下方式参与：
+
+1.  **Fork** 本项目。
+2.  创建你的特性分支 (`git checkout -b feature/NewFeature`)。
+3.  提交你的代码 (`git commit -m 'Add some NewFeature'`)。
+4.  将你的分支推送到远程 (`git push origin feature/NewFeature`)。
+5.  创建一个 **Pull Request**。
+
+## 鸣谢
+
+感谢所有为本项目提供灵感和支持的朋友。
+
+如果这个项目对你有帮助，可以请我喝杯咖啡！
+
+<p align="center">
+  <img src="https://my-buxket.oss-cn-beijing.aliyuncs.com/-aef07b0450feff4.jpg" alt="赞赏码" width="300"/>
+</p>
 
 ## 许可证
 
-MIT
-
-## 反馈
-
-欢迎提交 Issue 或 PR 改进项目
+本项目基于 [MIT License](LICENSE) 开源。
