@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  一个“地铁租房数据可视化”项目，支持多城市。
+  “轨住图谱”是一个专注于城市地铁沿线租房分析的可视化工具。它能自动汇集并分析公开的地铁与房源数据，将繁杂的信息转化为一目了然的分析图表，帮助你更直观地了解不同站点的租金水平，做出更聪明的租房决策。
 </p>
 
 ---
@@ -81,7 +81,6 @@
 
 如果你熟悉 Docker，我们强烈推荐使用容器化方式来运行本项目，这样可以免去环境配置的麻烦。
 
-<<<<<<< HEAD
 1.  **构建镜像**
     在项目根目录下运行：
     ```bash
@@ -98,20 +97,6 @@
 
 3.  **访问应用**
     打开浏览器，访问 `http://127.0.0.1:5000/`。
-=======
-- `src/subway_visualize/app.py`：Flask 路由与参数校验、错误提示
-- `src/subway_visualize/main.py`：生产服务入口（Waitress 监听 5000）
-- `src/subway_visualize/templates/index.html`：前端页面
-- `src/subway_visualize/static/style.css`：样式文件
-- `src/subway_visualize/static/anjuke_city_map.json`：安居客城市与子域缩写映射
-- `src/subway_visualize/services/subway_visualize.py`：数据抓取、解析与可视化
-- `src/subway_visualize/services/crawler_firecrawl.py`：抓取辅助
-- `src/subway_visualize/config.py`：配置与环境变量读取
-- `requirements.txt`：依赖列表
-- `start.ps1`：Windows 启动脚本
-- `serve.py`：统一启动入口
-- `.env.example`：环境变量示例
->>>>>>> ebffb9402ed0e49e7ae53833180b46f045504de9
 
 4.  **查看日志或停止容器**
     ```bash
@@ -143,7 +128,7 @@
     1.  减少“抓取页数” (`pages` 参数)。
     2.  等待几分钟后重试。
     3.  更换其他地铁线路进行尝试。
-    4.  （进阶）配置并启用 Firecrawl 等更强的抓取服务。
+    4.  配置并启用 Firecrawl 等更强的抓取服务。
 
 ## 项目结构
 
